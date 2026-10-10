@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09090c">
+  <title>BERAFLIX — Movies & Series</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09090c;
+      --panel: #14141b;
+      --gold: #e9bd70;
+      --text: #f7f5f1;
+      --muted: #a4a1ad;
+      --line: #292832;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 15px 5%;
+      background: #09090cf2;
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      font-size: 23px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .search {
+      flex: 1;
+      max-width: 480px;
+      margin-left: auto;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      color: white;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+    }
+
+    input:focus { border-color: var(--gold); }
+
+    main {
+      max-width: 1400px;
+      margin: auto;
+      padding: 24px 5% 100px;
+    }
+
+    .hero {
+      min-height: 230px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      border: 1px solid #413322;
+      border-radius: 22px;
+      background:
+        radial-gradient(ellipse at 80% 20%, #76502c55, transparent 50%),
+        linear-gradient(120deg, #211a14, #101015 65%);
+      margin-bottom: 30px;
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    h1 { font-size: clamp(30px, 6vw, 52px); margin: 10px 0; }
+    h2 { font-size: 21px; margin: 28px 0 16px; }
+    p { color: var(--muted); }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 18px 12px;
+    }
+
+    .movie {
+      min-width: 0;
+      cursor: pointer;
+      transition: transform .2s;
+    }
+
+    .movie:hover { transform: translateY(-4px); }
+
+    .poster {
+      position: relative;
+      aspect-ratio: 2 / 3;
+      overflow: hidden;
+      border-radius: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+    }
+
+    .poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .poster .placeholder {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      text-align: center;
+      color: var(--gold);
+      background: linear-gradient(145deg, #29232a, #111116);
+    }
+
+    .movie h3 {
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 9px 0 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .meta { color: var(--muted); font-size: 11px; }
+
+    .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 11px 17px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: white;
+      background: var(--panel);
+    }
+
+    .btn.primary {
+      color: #17110a;
+      background: var(--gold);
+      border-color: var(--gold);
+      font-weight: 800;
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .message {
+      padding: 28px 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .hidden { display: none !important; }
+
+    dialog {
+      width: min(760px, 94vw);
+      max-height: 90vh;
+      overflow: auto;
+      color: var(--text);
+      background: #111116;
+      border: 1px solid #413a30;
+      border-radius: 18px;
+    }
+
+    dialog::backdrop { background: #000c; }
+
+    .detail-poster {
+      width: 125px;
+      max-width: 38%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      border-radius: 12px;
+      background: var(--panel);
+    }
+
+    .detail-top { display: flex; gap: 18px; }
+
+    video {
+      width: 100%;
+      max-height: 65vh;
+      background: black;
+      border-radius: 12px;
+      margin-top: 18px;
+    }
+
+    .source-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+    nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 6;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 6px calc(12px + env(safe-area-inset-bottom));
+      background: #101015f5;
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    nav button {
+      color: var(--muted);
+      border: 0;
+      background: transparent;
+      font-size: 12px;
+    }
+
+    nav button.active { color: var(--gold); }
+
+    @media (max-width: 1050px) {
+      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 12px 4%; gap: 10px; }
+      .brand { font-size: 19px; }
+      main { padding: 18px 4% 95px; }
+      .hero { min-height: 190px; padding: 22px; }
+      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 9px; }
+      .movie h3 { font-size: 12px; }
+      h2 { font-size: 19px; }
+    }
+
+    @media (max-width: 360px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">BERAFLIX</div>
+    <form class="search" id="searchForm">
+      <input id="searchInput" placeholder="Search movies and series..." aria-label="Search movies">
+    </form>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Your next obsession starts here</div>
+      <h1>Discover your<br>next favourite.</h1>
+      <p>Movies and series, all in one place.</p>
+    </section>
+
+    <div class="section-head">
+      <h2 id="sectionTitle">Trending now</h2>
+      <button class="btn" id="refreshBtn">Refresh</button>
+    </div>
+
+    <div id="status" class="message">Loading movies...</div>
+    <section id="movies" class="grid"></section>
+  </main>
+
+  <nav>
+    <button class="active" data-view="trending">Discover</button>
+    <button data-view="home">Home</button>
+    <button data-view="shelf">My Shelf</button>
+  </nav>
+
+  <dialog id="detailsDialog">
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn" id="closeDialog">Close ✕</button>
+    </div>
+    <div id="detailContent"></div>
+  </dialog>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const moviesEl = $("#movies");
+    const statusEl = $("#status");
+    const dialog = $("#detailsDialog");
+
+    let currentMovies = [];
+    let currentView = "trending";
+
+    const shelf = {
+      get() {
+        try { return JSON.parse(localStorage.getItem("beraflix-shelf") || "[]"); }
+        catch { return []; }
+      },
+      has(id) { return this.get().some(m => String(m.id) === String(id)); },
+      toggle(movie) {
+        let list = this.get();
+        list = this.has(movie.id)
+          ? list.filter(m => String(m.id) !== String(movie.id))
+          : [...list, movie];
+        localStorage.setItem("beraflix-shelf", JSON.stringify(list));
+      }
+    };
+
+    async function api(url) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("API request failed (" + response.status + ")");
+      return response.json();
+    }
+
+    function findList(payload) {
+      if (Array.isArray(payload)) return payload;
+
+      for (const key of ["results", "data", "items", "list", "subjects", "movies", "recommendations"]) {
+        const value = payload?.[key];
+        if (Array.isArray(value)) return value;
+
+        if (value && typeof value === "object") {
+          for (const nested of ["results", "items", "list", "subjects", "movies"]) {
+            if (Array.isArray(value[nested])) return value[nested];
+          }
+        }
+      }
+
+      return [];
+    }
+
+    function normalize(raw) {
+      const id = raw.subjectId ?? raw.id ?? raw.movieId ?? raw.videoId ?? raw.idStr;
+      const title = raw.title ?? raw.name ?? raw.subject?.title ?? "Untitled";
+      const poster = raw.cover?.url ?? raw.coverUrl ?? raw.posterUrl ??
+        raw.poster ?? raw.thumbnail ?? raw.image ?? raw.subject?.cover?.url ?? "";
+
+      return {
+        id: id == null ? "" : String(id),
+        title,
+        poster,
+        year: raw.year ?? raw.releaseDate ?? raw.release_date ?? "",
+        description: raw.description ?? raw.introduction ?? raw.summary ?? "",
+        raw
+      };
+    }
+
+    function render(list) {
+      currentMovies = list.map(normalize).filter(m => m.id && m.title);
+      moviesEl.innerHTML = "";
+
+      if (!currentMovies.length) {
+        statusEl.textContent = "No movies were returned. Check the API response format.";
+        statusEl.classList.remove("hidden");
+        return;
+      }
+
+      statusEl.classList.add("hidden");
+
+      for (const movie of currentMovies) {
+        const card = document.createElement("article");
+        card.className = "movie";
+
+        const poster = document.createElement("div");
+        poster.className = "poster";
+
+        if (movie.poster) {
+          const img = document.createElement("img");
+          img.src = movie.poster;
+          img.alt = movie.title;
+          img.loading = "lazy";
+          img.onerror = () => {
+            poster.innerHTML = "";
+            const fallback = document.createElement("div");
+            fallback.className = "placeholder";
+            fallback.textContent = movie.title;
+            poster.appendChild(fallback);
+          };
+          poster.appendChild(img);
+        } else {
+          const fallback = document.createElement("div");
+          fallback.className = "placeholder";
+          fallback.textContent = movie.title;
+          poster.appendChild(fallback);
+        }
+
+        const title = document.createElement("h3");
+        title.textContent = movie.title;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = movie.year || "Movie / Series";
+
+        card.append(poster, title, meta);
+        card.addEventListener("click", () => openMovie(movie));
+        moviesEl.appendChild(card);
+      }
+    }
+
+    async function loadTrending() {
+      currentView = "trending";
+      $("#sectionTitle").textContent = "Trending now";
+      statusEl.textContent = "Fetching trending movies...";
+      statusEl.classList.remove("hidden");
+
+      try {
+        const data = await api("/api/trending?page=0&perPage=18");
+        render(findList(data));
+      } catch (error) {
+        statusEl.textContent = error.message + ". Check whether the movie API is online.";
+      }
+    }
+
+    async function loadHome() {
+      currentView = "home";
+      $("#sectionTitle").textContent = "Discover movies";
+      statusEl.textContent = "Fetching movies...";
+      statusEl.classList.remove("hidden");
+
+      try {
+        const data = await api("/api/homepage");
+        render(findList(data));
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    }
+
+    function loadShelf() {
+      currentView = "shelf";
+      $("#sectionTitle").textContent = "My Shelf";
+      render(shelf.get());
+    }
+
+    async function searchMovies(query) {
+      currentView = "search";
+      $("#sectionTitle").textContent = 'Results for "' + query + '"';
+      statusEl.textContent = "Searching...";
+      statusEl.classList.remove("hidden");
+
+      try {
+        const data = await api("/api/search/" + encodeURIComponent(query) + "?page=1&perPage=24&type=0");
+        render(findList(data));
+      } catch (error) {
+        statusEl.textContent = error.message;
+      }
+    }
+
+    async function openMovie(movie) {
+      $("#detailContent").innerHTML = "<p>Loading movie details...</p>";
+      dialog.showModal();
+
+      try {
+        const data = await api("/api/info/" + encodeURIComponent(movie.id));
+        const detail = data.results?.subject ?? data.results ?? data.data ?? data;
+        const combined = { ...movie, ...normalize({ ...movie.raw, ...detail }) };
+
+        const description = detail.description ?? detail.introduction ??
+          combined.description ?? "No description available.";
+
+        $("#detailContent").innerHTML = "";
+
+        const top = document.createElement("div");
+        top.className = "detail-top";
+
+        const poster = document.createElement("img");
+        poster.className = "detail-poster";
+        poster.alt = combined.title;
+        poster.src = combined.poster || "";
+
+        const info = document.createElement("div");
+        const title = document.createElement("h2");
+        title.textContent = detail.title ?? combined.title;
+
+        const desc = document.createElement("p");
+        desc.textContent = description;
+
+        const save = document.createElement("button");
+        save.className = "btn primary";
+        save.textContent = shelf.has(movie.id) ? "Remove from My Shelf" : "＋ My Shelf";
+        save.onclick = () => {
+          shelf.toggle(movie);
+          save.textContent = shelf.has(movie.id) ? "Remove from My Shelf" : "＋ My Shelf";
+        };
+
+        info.append(title, desc, save);
+        top.append(poster, info);
+        $("#detailContent").append(top);
+
+        const player = document.createElement("video");
+        player.controls = true;
+        player.playsInline = true;
+        player.preload = "metadata";
+        player.className = "hidden";
+
+        const sourcesHeading = document.createElement("h3");
+        sourcesHeading.textContent = "Available playback sources";
+
+        const sources = document.createElement("div");
+        sources.className = "source-list";
+        sources.textContent = "Loading sources...";
+
+        $("#detailContent").append(sourcesHeading, sources, player);
+
+        try {
+          const sourceData = await api("/api/sources/" + encodeURIComponent(movie.id) + "?season=1&episode=1");
+          const candidates = [];
+
+          function collect(value) {
+            if (!value) return;
+            if (Array.isArray(value)) return value.forEach(collect);
+            if (typeof value !== "object") return;
+
+            const url = value.url ?? value.playUrl ?? value.download_url ?? value.streamUrl;
+            if (typeof url === "string" && /^https?:\/\//i.test(url)) {
+              candidates.push({
+                url,
+                label: value.quality ?? value.resolution ?? value.name ?? "Play",
+                download: value.download_url
+              });
+            }
+
+            for (const [key, child] of Object.entries(value)) {
+              if (key !== "url" && key !== "playUrl" && key !== "download_url" && key !== "streamUrl") {
+                collect(child);
+              }
+            }
+          }
+
+          collect(sourceData);
+
+          sources.innerHTML = "";
+
+          if (!candidates.length) {
+            sources.textContent = "No playable source was found in the API response.";
+          } else {
+            for (const source of candidates) {
+              const button = document.createElement("button");
+              button.className = "btn primary";
+              button.textContent = source.label;
+
+              button.onclick = () => {
+                player.classList.remove("hidden");
+                player.src = source.url;
+                player.load();
+                player.play().catch(() => {});
+              };
+
+              sources.appendChild(button);
+            }
+          }
+
+          const downloadUrl = candidates.find(c => c.download)?.download;
+          if (downloadUrl) {
+            const download = document.createElement("a");
+            download.className = "btn";
+            download.href = downloadUrl;
+            download.textContent = "Download";
+            download.target = "_blank";
+            download.rel = "noopener";
+            sources.appendChild(download);
+          }
+        } catch {
+          sources.textContent = "Unable to retrieve playback sources.";
+        }
+      } catch {
+        $("#detailContent").textContent = "Unable to load movie details. Please try again.";
+      }
+    }
+
+    $("#searchForm").addEventListener("submit", event => {
+      event.preventDefault();
+      const query = $("#searchInput").value.trim();
+      if (query) searchMovies(query);
+    });
+
+    $("#refreshBtn").addEventListener("click", () => {
+      if (currentView === "home") loadHome();
+      else if (currentView === "shelf") loadShelf();
+      else loadTrending();
+    });
+
+    $("#closeDialog").addEventListener("click", () => dialog.close());
+
+    document.querySelectorAll("nav button").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+        button.classList.add("active");
+
+        if (button.dataset.view === "home") loadHome();
+        else if (button.dataset.view === "shelf") loadShelf();
+        else loadTrending();
+      });
+    });
+
+    loadTrending();
+  </script>
+</body>
+</html>
