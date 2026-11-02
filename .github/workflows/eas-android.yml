@@ -15,25 +15,46 @@ concurrency:
 
 jobs:
   build:
+    name: Build Android preview APK
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
 
-      - uses: actions/setup-node@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm lint
-      - run: pnpm test
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Start EAS Android build
+      - name: Type-check
+        run: pnpm check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Verify Expo token is configured
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: pnpm dlx eas-cli@latest build --platform android --profile preview --non-interactive --no-wait
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions repository secret EXPO_TOKEN"
+            exit 1
+          fi
+
+      - name: Build on EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: pnpm dlx eas-cli@latest build --platform android --profile preview --non-interactive --wait
