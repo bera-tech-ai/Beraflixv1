@@ -11,15 +11,15 @@ import { BeraflixScreen } from "@/components/beraflix/screen";
 import { ModeChip } from "@/components/beraflix/mode-chip";
 import { SectionHeading } from "@/components/beraflix/section-heading";
 import { beraflixColors, exploreModes, type ExploreMode } from "@/constants/beraflix-theme";
-import { browseCatalog, getChannels, getNovelHome, getSportsMatches, getWrestlingEvents, searchTitles } from "@/lib/beraflix/api";
-import type { CatalogTitle, ChannelRecord, ExploreContent } from "@/lib/beraflix/types";
+import { browseCatalog, getChannels, getCountries, getNovelHome, getSportsMatches, getWrestlingEvents, searchTitles } from "@/lib/beraflix/api";
+import type { CatalogTitle, ChannelRecord, CountryRecord, ExploreContent } from "@/lib/beraflix/types";
 import { rememberTitle } from "@/lib/beraflix/title-cache";
 
 export default function ExploreScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<ExploreMode>("movies");
-  const [directory, setDirectory] = useState<"all" | "country">("all");
-  const [country, setCountry] = useState("us");
+  const [country, setCountry] = useState("");
+  const [countries, setCountries] = useState<CountryRecord[]>([]);
   const [query, setQuery] = useState("");
   const [catalogResults, setCatalogResults] = useState<CatalogTitle[]>([]);
   const [otherResults, setOtherResults] = useState<ExploreContent[]>([]);
@@ -37,6 +37,7 @@ export default function ExploreScreen() {
       setCatalogResults([]);
       setOtherResults([]);
       setChannels([]);
+      if (mode === "channels" && !country) setCountries([]);
       setShowAllChannels(false);
       const load = async () => {
         try {
@@ -49,8 +50,13 @@ export default function ExploreScreen() {
             const items = query.trim() ? await searchTitles(query, "anime") : [];
             if (active) setCatalogResults(items);
           } else if (mode === "channels") {
-            const items = await getChannels(country);
-            if (active) setChannels(items);
+            if (!country) {
+              const items = await getCountries();
+              if (active) setCountries(items);
+            } else {
+              const items = await getChannels(country);
+              if (active) setChannels(items);
+            }
           } else {
             const items = mode === "books" ? await getNovelHome()
               : mode === "sports" ? await getSportsMatches()
@@ -72,7 +78,7 @@ export default function ExploreScreen() {
     rememberTitle(item);
     router.push({ pathname: "/title/[id]", params: { id: item.id } } as never);
   };
-  const countryLabel = country.toUpperCase();
+  const countryLabel = countries.find((item) => item.code === country)?.name ?? country.toUpperCase();
 
   return (
     <BeraflixScreen>
@@ -97,27 +103,13 @@ export default function ExploreScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modeRail}>
-        {exploreModes.map((item) => <ModeChip key={item.id} label={item.label} selected={mode === item.id} onPress={() => setMode(item.id)} />)}
+        {exploreModes.map((item) => <ModeChip key={item.id} label={item.label} selected={mode === item.id} onPress={() => { setMode(item.id); if (item.id === "channels") setCountry(""); }} />)}
       </ScrollView>
 
       {isChannels ? (
         <View style={styles.section}>
-          <SectionHeading title="Channel Directory" eyebrow="Browse live channels" />
-          <View style={styles.directoryRail}>
-            <ModeChip label="All in country" selected={directory === "all"} onPress={() => setDirectory("all")} />
-            <ModeChip label="By country" selected={directory === "country"} onPress={() => setDirectory("country")} />
-          </View>
-          {directory === "country" ? (
-            <View style={styles.countryBox}>
-              <Text style={styles.countryLabel}>Two-letter country code</Text>
-              <TextInput autoCapitalize="none" maxLength={2} onChangeText={(value) => setCountry(value.toLowerCase())} placeholder="us" placeholderTextColor={beraflixColors.quiet} style={styles.countryInput} value={country} />
-            </View>
-          ) : <Text style={styles.countryHint}>Showing the {countryLabel} channel directory. Choose “By country” to change it.</Text>}
-          <Pressable accessibilityRole="button" onPress={() => router.push("/channels/channel9" as never)} style={({ pressed }) => [styles.scheduleCard, pressed && styles.pressed]}>
-            <View style={styles.scheduleIcon}><Ionicons name="calendar-outline" size={21} color={beraflixColors.red} /></View>
-            <View style={styles.scheduleCopy}><Text style={styles.scheduleTitle}>Channel 9 Schedule</Text><Text style={styles.scheduleBody}>See what’s on and what’s coming up.</Text></View>
-            <Ionicons name="chevron-forward" size={19} color={beraflixColors.muted} />
-          </Pressable>
+          <SectionHeading title={country ? `${countryLabel} Channels` : "Choose a country"} eyebrow="Browse live channels" />
+          {!country ? <View style={styles.countryList}>{countries.map((item) => <Pressable key={item.code} accessibilityRole="button" onPress={() => setCountry(item.code)} style={({ pressed }) => [styles.countryRow, pressed && styles.pressed]}><View style={styles.countryMark}><Ionicons name="globe-outline" size={17} color={beraflixColors.red} /></View><View style={styles.channelCopy}><Text style={styles.channelName}>{item.name}</Text><Text style={styles.channelMeta}>{item.channelCount} channel{item.channelCount === 1 ? "" : "s"}{item.timeZone ? ` · ${item.timeZone}` : ""}</Text></View><Ionicons name="chevron-forward" size={19} color={beraflixColors.muted} /></Pressable>)}</View> : <><Pressable accessibilityRole="button" onPress={() => setCountry("")} style={({ pressed }) => [styles.backCountry, pressed && styles.pressed]}><Ionicons name="arrow-back" size={17} color={beraflixColors.red} /><Text style={styles.showMoreText}>Choose another country</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.push("/channels/channel9" as never)} style={({ pressed }) => [styles.scheduleCard, pressed && styles.pressed]}><View style={styles.scheduleIcon}><Ionicons name="calendar-outline" size={21} color={beraflixColors.red} /></View><View style={styles.scheduleCopy}><Text style={styles.scheduleTitle}>Channel 9 Schedule</Text><Text style={styles.scheduleBody}>See what’s on and what’s coming up.</Text></View><Ionicons name="chevron-forward" size={19} color={beraflixColors.muted} /></Pressable></>}
         </View>
       ) : (
         <SectionHeading title={exploreModes.find((item) => item.id === mode)?.label ?? "Explore"} eyebrow={query.trim() ? "Search results" : "Browse by category"} />
@@ -134,17 +126,17 @@ export default function ExploreScreen() {
       ) : null}
       {!updating && !failed && isChannels && channels.length > 0 ? (
         <View style={styles.channelList}>
-          {channels.slice(0, showAllChannels ? 30 : 6).map((item) => (
+          {country && channels.slice(0, showAllChannels ? 30 : 6).map((item) => (
             <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push({ pathname: "/channels/[country]/[id]", params: { country, id: item.id, name: item.name } } as never)} style={({ pressed }) => [styles.channelRow, pressed && styles.pressed]}>
               <View style={styles.channelMark}><Ionicons name="tv-outline" size={17} color={beraflixColors.red} /></View>
               <View style={styles.channelCopy}><Text numberOfLines={1} style={styles.channelName}>{item.name}</Text><Text style={styles.channelMeta}>{item.country || countryLabel}{item.languages.length ? ` · ${item.languages.slice(0, 2).join(", ")}` : ""}</Text></View>
               <Ionicons name="play-circle-outline" size={22} color={beraflixColors.red} />
             </Pressable>
           ))}
-          {channels.length > 6 ? <Pressable accessibilityRole="button" onPress={() => setShowAllChannels((value) => !value)} style={({ pressed }) => [styles.showMoreButton, pressed && styles.pressed]}><Text style={styles.showMoreText}>{showAllChannels ? "Show fewer channels" : `Show all ${Math.min(channels.length, 30)} channels`}</Text><Ionicons name={showAllChannels ? "chevron-up" : "chevron-down"} size={17} color={beraflixColors.red} /></Pressable> : null}
+          {country && channels.length > 6 ? <Pressable accessibilityRole="button" onPress={() => setShowAllChannels((value) => !value)} style={({ pressed }) => [styles.showMoreButton, pressed && styles.pressed]}><Text style={styles.showMoreText}>{showAllChannels ? "Show fewer channels" : `Show all ${Math.min(channels.length, 30)} channels`}</Text><Ionicons name={showAllChannels ? "chevron-up" : "chevron-down"} size={17} color={beraflixColors.red} /></Pressable> : null}
         </View>
       ) : null}
-      {!updating && !failed && isChannels && channels.length === 0 ? <EmptyState icon="tv-outline" title="No channels found" message="No channel records are available for this country." /> : null}
+      {!updating && !failed && isChannels && country && channels.length === 0 ? <EmptyState icon="tv-outline" title="No channels found" message="No channel records are available for this country." /> : null}
       {!updating && !failed && mode === "anime" && !query.trim() ? <EmptyState icon="sparkles-outline" title="Search Anime" message="Enter a title above to search the verified Anime catalogue." /> : null}
       {!updating && !failed && (mode === "sports" || mode === "books" || mode === "wrestling") && otherResults.length === 0 ? <EmptyState icon={mode === "sports" ? "football-outline" : mode === "books" ? "book-outline" : "trophy-outline"} title="No titles available" message="There are no items in this section right now." /> : null}
       {!updating && !failed && (mode === "movies" || mode === "series" || (mode === "anime" && query.trim())) && catalogResults.length === 0 ? <EmptyState icon="search-outline" title={query.trim() ? "No matches found" : "No titles available"} message={query.trim() ? "Try another title or search term." : "There are no titles in this section right now."} /> : null}
@@ -160,11 +152,10 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: beraflixColors.white, fontSize: 14, paddingVertical: 10 },
   modeRail: { gap: 8, paddingRight: 20 },
   section: { gap: 14 },
-  directoryRail: { flexDirection: "row", gap: 8 },
-  countryBox: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, minHeight: 50, borderRadius: 14, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
-  countryLabel: { color: beraflixColors.muted, fontSize: 11, flex: 1 },
-  countryInput: { color: beraflixColors.white, width: 56, textAlign: "center", fontSize: 14, fontWeight: "900", letterSpacing: 1.5 },
-  countryHint: { color: beraflixColors.muted, fontSize: 11, lineHeight: 16 },
+  countryList: { overflow: "hidden", borderRadius: 18, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
+  countryRow: { minHeight: 65, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: beraflixColors.border },
+  countryMark: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: "#291018" },
+  backCountry: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: 7 },
   scheduleCard: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 76, padding: 14, borderRadius: 18, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
   scheduleIcon: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14, backgroundColor: "#291018" },
   scheduleCopy: { flex: 1, gap: 4 },
