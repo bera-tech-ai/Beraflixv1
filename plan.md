@@ -32,7 +32,7 @@ The backend folder is the template's Express/tRPC application, not the original 
 - `server/beraflix.ts` — server-mediated playback and other strictly allowlisted relays, with no database dependency.
 - `assets/images/` — distinct Beraflix launcher, splash, adaptive, monochrome, and favicon assets before checkpointing.
 - `app.config.ts` — existing native identifiers and public runtime config plus the linked EAS project ID; no provider or build credential is embedded.
-- `eas.json` — the explicitly requested `preview` profile produces an internal Android APK and fixes the public API base to the stable existing Beraflix origin, not a temporary sandbox host.
+- `eas.json` — the `preview` profile produces an internal Android APK and fixes the public API base to the stable existing Beraflix origin, not a temporary sandbox host.
 - `.easignore` — inherits standard project ignores and explicitly excludes `.env` and `.env.*` from EAS uploads.
 
 ## Design direction
@@ -61,8 +61,8 @@ The backend folder is the template's Express/tRPC application, not the original 
 
 **Signature Brand Color:** Beraflix signal red `#F01436`.
 
-## Delivery constraints
+## Delivery constraints and result
 
-The user explicitly requested a remote EAS Android build with `eas build --platform android --profile preview`, using an Expo token supplied through a secure project input card. The Expo project is linked under `@beratechs-team/beraflix`; the preview profile is configured for an installable internal APK. Run the EAS CLI only as a finite submission/wait command; do not run local Gradle or EAS builds as resident development services. Never place the token in source, public Expo variables, build config, or logs; remove the temporary secret after the remote build has accepted it. Provide installation instructions only after an actual APK build result and downloaded artifact are available.
+The user explicitly requested a remote EAS Android build with `eas build --platform android --profile preview`, using an Expo token supplied through secure project input. The Expo project is linked under `@beratechs-team/beraflix`; the `preview` profile produces an internal APK. The build completed successfully as version `1.0.0` (version code `1`, SDK `57.0.0`) from source commit `6196f98`, with build ID `ac011d69-fa9b-41a7-a317-a43de358f98c`. The direct Expo artifact is available at <https://expo.dev/artifacts/eas/m39IAznqQhkokDj-NpVYw9TZ9dl6qd5QztPzfsfm7mE.apk>. Do not run local Gradle or use a resident EAS build process. The one-time EAS token declaration was withdrawn after completion. No GitHub Release asset was published.
 
-Run the starter's supported TypeScript/lint/test checks. Save a Manus-managed checkpoint. Push a separate public backup branch named `beraflix-native` to `bera-tech-ai/Beraflixv1`, preserving `main` and `beraflix-nextjs`; do not change the Mobile project's Manus-managed canonical repository or overwrite refs.
+TypeScript, lint, and tests passed. Canonical `main` push succeeded at `6196f98`, and the public `beraflix-native` branch was fast-forwarded to the same commit; existing `main` and `beraflix-nextjs` refs were not changed. The Dashboard session expired before the structured Version history/checkpoint receipt could be independently verified, so report the successful canonical push without claiming a confirmed receipt. The native playback/download relay remains undeployed to the existing public origin; playback and downloads are not yet guaranteed by the installable client.
