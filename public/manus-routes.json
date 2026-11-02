@@ -1,0 +1,11 @@
+{
+  "routes": [
+    { "path": "/", "title": "Discover" },
+    { "path": "/explore", "title": "Explore" },
+    { "path": "/shelf", "title": "My Shelf" },
+    { "path": "/downloads", "title": "Downloads" },
+    { "path": "/profile", "title": "Profile" },
+    { "path": "/movie/:slug", "title": "Title details" },
+    { "path": "/watch/:slug", "title": "Video player" }
+  ]
+}
