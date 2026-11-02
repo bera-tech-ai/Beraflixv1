@@ -1,48 +1,106 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
-import { ScreenContainer } from "@/components/screen-container";
+import { ActionButton } from "@/components/beraflix/action-button";
+import { BrandHeader } from "@/components/beraflix/brand-header";
+import { ContentRail } from "@/components/beraflix/content-rail";
+import { EmptyState } from "@/components/beraflix/empty-state";
+import { BeraflixScreen } from "@/components/beraflix/screen";
+import { SectionHeading } from "@/components/beraflix/section-heading";
+import { beraflixColors } from "@/constants/beraflix-theme";
+import { getHomeFeed } from "@/lib/beraflix/api";
+import { rememberTitle } from "@/lib/beraflix/title-cache";
+import type { CatalogTitle, HomeFeed } from "@/lib/beraflix/types";
 
-/**
- * Home Screen - NativeWind Example
- *
- * This template uses NativeWind (Tailwind CSS for React Native).
- * You can use familiar Tailwind classes directly in className props.
- *
- * Key patterns:
- * - Use `className` instead of `style` for most styling
- * - Theme colors: use tokens directly (bg-background, text-foreground, bg-primary, etc.); no dark: prefix needed
- * - Responsive: standard Tailwind breakpoints work on web
- * - Custom colors defined in tailwind.config.js
- */
-export default function HomeScreen() {
+const sectionLabels: Record<string, string> = {
+  Trending: "Trending",
+  "Popular Movies": "Popular Movies",
+  "Popular Series": "Popular Series",
+  "Latest Movies": "Latest Movies",
+  "Latest Series": "Latest Series",
+};
+
+export default function DiscoverScreen() {
+  const router = useRouter();
+  const [feed, setFeed] = useState<HomeFeed | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getHomeFeed().then((result) => {
+      if (active) setFeed(result);
+    }).catch(() => {
+      if (active) setFailed(true);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const openTitle = (item: CatalogTitle) => {
+    rememberTitle(item);
+    router.push({ pathname: "/title/[id]", params: { id: item.id } } as never);
+  };
+  const featured = feed?.items[0];
+  const artwork = featured?.backdropUrl ?? featured?.coverUrl;
+  const rails = feed?.sections.map((section) => ({
+    section,
+    items: feed.items.filter((item) => item.section === section).slice(0, 12),
+  })).filter((rail) => rail.items.length > 0) ?? [];
+
   return (
-    <ScreenContainer className="p-6">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 gap-8">
-          {/* Hero Section */}
-          <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Welcome</Text>
-            <Text className="text-base text-muted text-center">
-              Edit app/(tabs)/index.tsx to get started
-            </Text>
-          </View>
+    <BeraflixScreen>
+      <BrandHeader onSearch={() => router.push("/(tabs)/explore" as never)} />
 
-          {/* Example Card */}
-          <View className="w-full max-w-sm self-center bg-surface rounded-2xl p-6 shadow-sm border border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">NativeWind Ready</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              Use Tailwind CSS classes directly in your React Native components.
-            </Text>
-          </View>
-
-          {/* Example Button */}
-          <View className="items-center">
-            <TouchableOpacity className="bg-primary px-6 py-3 rounded-full active:opacity-80">
-              <Text className="text-background font-semibold">Get Started</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.hero}>
+        {artwork ? <Image source={{ uri: artwork }} contentFit="cover" cachePolicy="memory" transition={0} style={StyleSheet.absoluteFill} /> : null}
+        <View pointerEvents="none" style={styles.heroShade} />
+        <View style={styles.heroTop}>
+          <View style={styles.signalPill}><View style={styles.signalDot} /><Text style={styles.signalLabel}>BERAFLIX PICKS</Text></View>
+          <Text style={styles.heroKicker}>MOVIES · SERIES · MORE</Text>
         </View>
-      </ScrollView>
-    </ScreenContainer>
+        <View style={styles.heroCopy}>
+          <Text numberOfLines={2} style={styles.heroTitle}>{featured?.title ?? "Stories worth staying up for."}</Text>
+          <Text numberOfLines={3} style={styles.heroBody}>
+            {featured?.description || "Discover your next film, series, match, or late-night read."}
+          </Text>
+          <ActionButton
+            label={featured ? "View title" : "Explore titles"}
+            onPress={featured ? () => openTitle(featured) : () => router.push("/(tabs)/explore" as never)}
+          />
+        </View>
+        <View style={styles.heroUnderline} />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeading title="Continue Watching" eyebrow="Pick up the story" />
+        <EmptyState icon="play-circle-outline" title="Nothing to continue yet" message="When you start watching, your place will be kept on this device." />
+      </View>
+
+      {rails.map(({ section, items }) => (
+        <ContentRail key={section} title={sectionLabels[section] ?? "Discover"} items={items} onSelect={openTitle} />
+      ))}
+      {!feed && failed ? (
+        <EmptyState icon="cloud-offline-outline" title="Catalogue unavailable" message="Try Explore again later. Your device-only shelf remains available." />
+      ) : null}
+      {feed && feed.items.length === 0 ? (
+        <EmptyState icon="film-outline" title="No titles available" message="There are no titles in the current feed." />
+      ) : null}
+    </BeraflixScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  hero: { minHeight: 318, justifyContent: "space-between", overflow: "hidden", padding: 22, borderRadius: 24, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
+  heroShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(8,9,13,0.76)" },
+  heroTop: { gap: 14 },
+  signalPill: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 7, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 14, backgroundColor: "#291018" },
+  signalDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: beraflixColors.red },
+  signalLabel: { color: beraflixColors.white, fontSize: 9, fontWeight: "900", letterSpacing: 1.8 },
+  heroKicker: { color: beraflixColors.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  heroCopy: { gap: 12, maxWidth: 310 },
+  heroTitle: { color: beraflixColors.white, fontSize: 32, lineHeight: 37, fontWeight: "900", letterSpacing: -0.7 },
+  heroBody: { color: beraflixColors.muted, fontSize: 14, lineHeight: 21, marginBottom: 4 },
+  heroUnderline: { position: "absolute", right: -34, top: 45, width: 130, height: 290, borderLeftWidth: 1, borderColor: "#35111B", transform: [{ rotate: "27deg" }] },
+  section: { gap: 14 },
+});
