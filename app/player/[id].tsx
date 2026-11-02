@@ -45,6 +45,7 @@ export default function PlayerScreen() {
   const recordProgressRef = useRef(recordProgress);
   const markWatchedRef = useRef(markWatched);
   const playbackAbort = useRef<AbortController | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const originalBrightness = useRef<number | null>(null);
   const isSeries = Boolean(title && /series|tv|show/i.test(title.type));
   const selectedSeason = /^\d{1,3}$/.test(season) ? Number(season) : undefined;
@@ -135,8 +136,34 @@ export default function PlayerScreen() {
 
   useEffect(() => () => {
     playbackAbort.current?.abort();
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
     player.pause();
   }, [player]);
+
+  const schedulePlaybackRefresh = (request: Parameters<typeof preparePlayback>[0], expiresIn: number) => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    const refreshIn = Math.max(30, expiresIn - 90);
+    refreshTimer.current = setTimeout(() => {
+      void (async () => {
+        const position = player.currentTime;
+        const wasPlaying = player.playing;
+        try {
+          const fresh = await preparePlayback(request);
+          await player.replaceAsync({
+            uri: fresh.uri,
+            contentType: "auto",
+            metadata: { title: title?.title, ...(title?.coverUrl ? { artwork: title.coverUrl } : {}) },
+          });
+          if (Number.isFinite(position) && position > 0) player.currentTime = position;
+          if (wasPlaying) player.play();
+          schedulePlaybackRefresh(request, fresh.expiresIn);
+        } catch {
+          setStatus("error");
+          setStatusMessage("Playback could not refresh. Press Retry to continue watching.");
+        }
+      })();
+    }, refreshIn * 1000);
+  };
 
   const prepareAndPlay = async (quality: typeof qualityOptions[number] = state.preferences.quality) => {
     if (!title || !title.detailPath || !title.hasResource) {
@@ -155,12 +182,13 @@ export default function PlayerScreen() {
     playbackAbort.current?.abort();
     const controller = new AbortController();
     playbackAbort.current = controller;
+    const request = {
+      detailPath: title.detailPath,
+      quality,
+      ...(isSeries ? { season: selectedSeason, episode: selectedEpisode } : {}),
+    } as const;
     try {
-      const prepared = await preparePlayback({
-        detailPath: title.detailPath,
-        quality,
-        ...(isSeries ? { season: selectedSeason, episode: selectedEpisode } : {}),
-      }, controller.signal);
+      const prepared = await preparePlayback(request, controller.signal);
       if (controller.signal.aborted) return;
       await player.replaceAsync({
         uri: prepared.uri,
@@ -169,6 +197,7 @@ export default function PlayerScreen() {
       });
       setStatus("ready");
       setStatusMessage("Secure playback is ready.");
+      schedulePlaybackRefresh(request, prepared.expiresIn);
       player.play();
     } catch {
       if (controller.signal.aborted) return;
