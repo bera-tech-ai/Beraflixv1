@@ -249,7 +249,8 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       lastStatAt = now;
       void FileSystem.getInfoAsync(fileUri).then((info) => {
         if (!activeTasks.current.has(id) || !info.exists || info.isDirectory) return;
-        updateRecord(id, { bytesWritten: Math.min(info.size, expectedBytes) });
+        const total = expectedBytes || (_progress.totalBytesExpectedToWrite > 0 ? _progress.totalBytesExpectedToWrite : info.size);
+        updateRecord(id, { expectedBytes: total, bytesWritten: Math.min(info.size, total || info.size) });
       }).catch(() => undefined);
     };
   }, [updateRecord]);
@@ -271,14 +272,17 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       if (!result) throw new Error("The transfer was cancelled.");
       if (result.status !== 200 && result.status !== 206) throw new DownloadHttpError(result.status);
       const current = recordsRef.current.get(id);
-      if (!current || !current.fileUri || !current.contentType) return;
+      if (!current || !current.fileUri) return;
       const responseType = String(result.mimeType || result.headers["Content-Type"] || result.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
-      if (responseType && responseType !== current.contentType) throw new Error("The saved media type could not be verified.");
+      const contentType = responseType === "video/mp4" || responseType === "video/webm" ? responseType : current.contentType || "video/mp4";
+      if (responseType && !["video/mp4", "video/webm"].includes(responseType)) throw new Error("The saved media type could not be verified.");
       const info = await FileSystem.getInfoAsync(current.fileUri);
-      if (!info.exists || info.isDirectory || info.size !== current.expectedBytes) throw new Error("The saved byte count could not be verified.");
+      if (!info.exists || info.isDirectory || info.size < 1) throw new Error("The saved byte count could not be verified.");
       updateRecord(id, {
         status: "complete",
-        bytesWritten: current.expectedBytes,
+        contentType,
+        expectedBytes: info.size,
+        bytesWritten: info.size,
         relayHandle: null,
         resumeData: null,
         message: "Saved and verified for offline playback.",
@@ -321,9 +325,11 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       };
       const prepared = await preparePlayback(request, controller.signal, { includeOffline: true });
       if (controller.signal.aborted || !recordsRef.current.has(record.id)) return;
-      if (!prepared.downloadUri || !prepared.contentType || prepared.totalBytes < 1) throw new Error("Offline saving is not available for this title.");
-      const freeBytes = await FileSystem.getFreeDiskStorageAsync();
-      if (freeBytes < prepared.totalBytes + RESERVE_BYTES) throw new Error("Not enough free space on this device.");
+      if (!prepared.downloadUri) throw new Error("Download is not available for this title.");
+      if (prepared.totalBytes > 0) {
+        const freeBytes = await FileSystem.getFreeDiskStorageAsync();
+        if (freeBytes < prepared.totalBytes + RESERVE_BYTES) throw new Error("Not enough free space on this device.");
+      }
       const directory = privateDownloadDirectory();
       if (!directory) throw new Error("Offline storage is unavailable on this device.");
       await FileSystem.makeDirectoryAsync(directory, { intermediates: true });

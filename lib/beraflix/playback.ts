@@ -24,12 +24,7 @@ type StreamResponse = {
   expiresIn?: unknown;
 };
 
-type OfflinePrepareResponse = {
-  totalBytes?: unknown;
-  contentType?: unknown;
-  strongEtag?: unknown;
-  rangeSupported?: unknown;
-};
+type DirectDownloadResponse = { url?: unknown };
 
 function isTrustedMediaUrl(value: unknown): value is string {
   if (typeof value !== "string" || value.length > 4096) return false;
@@ -91,20 +86,9 @@ export async function preparePlayback(
     let contentType: "video/mp4" | "video/webm" | null = null;
     let totalBytes = 0;
     if (options.includeOffline) {
-      const offline = await getJson<OfflinePrepareResponse>(`${baseUrl}/api/offline/prepare?${params.toString()}`, controller.signal);
-      const candidateType = typeof offline.contentType === "string" ? offline.contentType.split(";")[0].trim().toLowerCase() : "";
-      if ((candidateType !== "video/mp4" && candidateType !== "video/webm") || offline.rangeSupported !== true) {
-        throw new Error("This title does not have a verified offline format.");
-      }
-      if (typeof offline.totalBytes !== "number" || !Number.isSafeInteger(offline.totalBytes) || offline.totalBytes < 1) {
-        throw new Error("The offline media size could not be verified.");
-      }
-      const fileParams = new URLSearchParams(params);
-      fileParams.set("total", String(offline.totalBytes));
-      if (typeof offline.strongEtag === "string" && offline.strongEtag.length <= 200) fileParams.set("etag", offline.strongEtag);
-      downloadUri = `${baseUrl}/api/offline/file?${fileParams.toString()}`;
-      contentType = candidateType;
-      totalBytes = offline.totalBytes;
+      const direct = await getJson<DirectDownloadResponse>(`${baseUrl}/api/download?${params.toString()}`, controller.signal);
+      if (!isTrustedMediaUrl(direct.url)) throw new Error("The direct download service returned an invalid media URL.");
+      downloadUri = direct.url;
     }
 
     return { uri: stream.url, downloadUri, relayHandle: null, contentType, totalBytes, quality: request.quality, expiresAt, expiresIn };
