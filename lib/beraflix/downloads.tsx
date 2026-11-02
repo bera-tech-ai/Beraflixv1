@@ -308,7 +308,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     }
     const controller = new AbortController();
     preparingControllers.current.set(record.id, controller);
-    updateRecord(record.id, { status: "preparing", message: "Checking source and device storage…", bytesWritten: 0 });
+      updateRecord(record.id, { status: "preparing", message: "Checking the download…", bytesWritten: 0 });
     try {
       const title = await resolveTitle(record, preferred);
       if (controller.signal.aborted || !recordsRef.current.has(record.id)) return;
@@ -332,7 +332,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       const fileUri = `${directory}beraflix-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}.${extension}`;
       const next = updateRecord(record.id, {
         status: "downloading",
-        message: "Downloading to this device…",
+        message: "Downloading…",
         contentType: prepared.contentType,
         expectedBytes: prepared.totalBytes,
         bytesWritten: 0,
@@ -422,7 +422,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     }
     const task = makeTask(id, record.downloadUri, record.fileUri, record.expectedBytes, record.resumeData);
     activeTasks.current.set(id, task);
-    updateRecord(id, { status: "downloading", message: "Resuming transfer…" });
+      updateRecord(id, { status: "downloading", message: "Resuming download…" });
     await runTask(id, task);
   }, [makeTask, runTask, updateRecord]);
 
@@ -433,7 +433,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     if (record.fileUri) await FileSystem.deleteAsync(record.fileUri, { idempotent: true }).catch(() => undefined);
     const reset = updateRecord(id, {
       status: "preparing",
-      message: "Preparing a fresh offline transfer…",
+      message: "Preparing a fresh download…",
       expectedBytes: 0,
       bytesWritten: 0,
       fileUri: "",

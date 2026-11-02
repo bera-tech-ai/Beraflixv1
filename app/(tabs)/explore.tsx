@@ -26,6 +26,7 @@ export default function ExploreScreen() {
   const [channels, setChannels] = useState<ChannelRecord[]>([]);
   const [updating, setUpdating] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [showAllChannels, setShowAllChannels] = useState(false);
   const isChannels = mode === "channels";
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function ExploreScreen() {
       setCatalogResults([]);
       setOtherResults([]);
       setChannels([]);
+      setShowAllChannels(false);
       const load = async () => {
         try {
           if (mode === "movies" || mode === "series") {
@@ -132,13 +134,14 @@ export default function ExploreScreen() {
       ) : null}
       {!updating && !failed && isChannels && channels.length > 0 ? (
         <View style={styles.channelList}>
-          {channels.slice(0, 30).map((item) => (
+          {channels.slice(0, showAllChannels ? 30 : 6).map((item) => (
             <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push({ pathname: "/channels/[country]/[id]", params: { country, id: item.id, name: item.name } } as never)} style={({ pressed }) => [styles.channelRow, pressed && styles.pressed]}>
               <View style={styles.channelMark}><Ionicons name="tv-outline" size={17} color={beraflixColors.red} /></View>
               <View style={styles.channelCopy}><Text numberOfLines={1} style={styles.channelName}>{item.name}</Text><Text style={styles.channelMeta}>{item.country || countryLabel}{item.languages.length ? ` · ${item.languages.slice(0, 2).join(", ")}` : ""}</Text></View>
               <Ionicons name="play-circle-outline" size={22} color={beraflixColors.red} />
             </Pressable>
           ))}
+          {channels.length > 6 ? <Pressable accessibilityRole="button" onPress={() => setShowAllChannels((value) => !value)} style={({ pressed }) => [styles.showMoreButton, pressed && styles.pressed]}><Text style={styles.showMoreText}>{showAllChannels ? "Show fewer channels" : `Show all ${Math.min(channels.length, 30)} channels`}</Text><Ionicons name={showAllChannels ? "chevron-up" : "chevron-down"} size={17} color={beraflixColors.red} /></Pressable> : null}
         </View>
       ) : null}
       {!updating && !failed && isChannels && channels.length === 0 ? <EmptyState icon="tv-outline" title="No channels found" message="No channel records are available for this country." /> : null}
@@ -176,4 +179,6 @@ const styles = StyleSheet.create({
   channelName: { color: beraflixColors.white, fontSize: 12, fontWeight: "800" },
   channelMeta: { color: beraflixColors.muted, fontSize: 10 },
   pressed: { opacity: 0.74 },
+  showMoreButton: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: beraflixColors.border },
+  showMoreText: { color: beraflixColors.red, fontSize: 12, fontWeight: "800" },
 });

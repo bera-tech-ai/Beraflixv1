@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { WebView } from "react-native-webview";
 
 import { ActionButton } from "@/components/beraflix/action-button";
 import { BrandHeader } from "@/components/beraflix/brand-header";
@@ -21,6 +22,8 @@ export default function LiveChannelScreen() {
   const [name, setName] = useState(fallbackName);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState("Connecting to the live channel…");
+  const [streamKind, setStreamKind] = useState<"hls" | "embed" | null>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
 
   const load = useCallback(() => {
@@ -28,16 +31,19 @@ export default function LiveChannelScreen() {
     const controller = new AbortController();
     requestRef.current = controller;
     setStatus("loading");
+    setStreamKind(null);
+    setStreamUrl(null);
     setMessage("Connecting to the live channel…");
     void getChannelStream(country, channelId).then(async (stream) => {
       if (controller.signal.aborted) return;
-      if (stream.kind !== "hls") throw new Error("This channel only provides a web video embed, which is not supported in the native player.");
-      await player.replaceAsync({ uri: stream.url, contentType: "auto", metadata: { title: stream.name } });
-      if (controller.signal.aborted) return;
       setName(stream.name);
+      setStreamKind(stream.kind);
+      setStreamUrl(stream.url);
+      if (stream.kind === "hls") await player.replaceAsync({ uri: stream.url, contentType: "auto", metadata: { title: stream.name } });
+      if (controller.signal.aborted) return;
       setStatus("ready");
-      setMessage("Live");
-      player.play();
+      setMessage(stream.kind === "embed" ? "Live channel embed" : "Live");
+      if (stream.kind === "hls") player.play();
     }).catch((error) => {
       if (!controller.signal.aborted) {
         setStatus("error");
@@ -74,7 +80,7 @@ export default function LiveChannelScreen() {
         <Text style={styles.meta}>{country.toUpperCase()} · Channel {channelId}</Text>
       </View>
       <View style={styles.playerFrame}>
-        {status === "ready" ? <VideoView
+        {status === "ready" && streamKind === "hls" ? <VideoView
           player={player}
           style={styles.video}
           contentFit="contain"
@@ -82,7 +88,7 @@ export default function LiveChannelScreen() {
           fullscreenOptions={{ enable: true }}
           onFullscreenEnter={() => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE); }}
           onFullscreenExit={() => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT); }}
-        /> : <View style={styles.placeholder}>
+        /> : status === "ready" && streamKind === "embed" && streamUrl ? <WebView source={{ uri: streamUrl }} style={styles.webView} allowsFullscreenVideo allowsInlineMediaPlayback mediaPlaybackRequiresUserAction={false} /> : <View style={styles.placeholder}>
           <Ionicons name={status === "error" ? "cloud-offline-outline" : "radio-outline"} size={38} color={beraflixColors.red} />
           <Text style={styles.status}>{message}</Text>
         </View>}
@@ -101,6 +107,7 @@ const styles = StyleSheet.create({
   meta: { color: beraflixColors.muted, fontSize: 12 },
   playerFrame: { minHeight: 220, borderRadius: 20, overflow: "hidden", backgroundColor: "#000", borderWidth: 1, borderColor: beraflixColors.border },
   video: { width: "100%", aspectRatio: 16 / 9 },
+  webView: { width: "100%", height: 240, backgroundColor: "#000" },
   placeholder: { minHeight: 220, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
   status: { color: beraflixColors.muted, fontSize: 13, lineHeight: 19, textAlign: "center" },
 });

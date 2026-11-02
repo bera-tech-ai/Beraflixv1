@@ -32,7 +32,7 @@ export default function DownloadsScreen() {
       </View>
       <View style={styles.notice}>
         <Ionicons name="phone-portrait-outline" size={19} color={beraflixColors.red} />
-        <Text style={styles.noticeText}>Files and download records stay in app-private storage on this device. Only verified file bytes are counted.</Text>
+        <Text style={styles.noticeText}>Downloads stay in app-private storage on this device. Only verified file bytes are counted.</Text>
       </View>
       <SectionHeading title="Saved for offline" eyebrow={hydrated ? `${records.length} on this device` : "Device library"} />
       {!hydrated ? <Text style={styles.statusText}>Reading saved files from this device…</Text> : null}
@@ -40,7 +40,7 @@ export default function DownloadsScreen() {
         <EmptyState
           icon="download-outline"
           title="No offline files yet"
-          message="Only titles with a verified, supported offline source will be listed here. Progress appears only while a real transfer is writing to local storage."
+          message="Only titles with a verified, supported source will be listed here. Download progress appears while the file is being saved."
         />
       ) : null}
       {records.map((record) => (
@@ -56,7 +56,7 @@ export default function DownloadsScreen() {
         />
       ))}
       {records.length === 0 ? <ActionButton label="Explore titles" onPress={() => router.push("/(tabs)/explore" as never)} secondary /> : null}
-      <Text style={styles.footerNote}>A paused transfer can resume while its secure session is valid. If it expires, Retry starts a fresh verified transfer.</Text>
+      <Text style={styles.footerNote}>A paused download can resume while its secure session is valid. If it expires, Retry starts a fresh download.</Text>
 
       <Modal visible={deleteTarget !== null} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
         <View style={styles.modalBackdrop}>

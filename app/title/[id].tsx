@@ -63,13 +63,13 @@ export default function TitleDetailsScreen() {
     }
     if (downloadRecord?.status === "paused") {
       await resumeDownload(downloadRecord.id);
-      setDownloadNotice("Transfer resume requested. Check its actual progress in Downloads.");
+      setDownloadNotice("Download resume requested. Check Downloads for progress.");
       router.push("/(tabs)/downloads" as never);
       return;
     }
     if (downloadRecord?.status === "error") {
       await retryDownload(downloadRecord.id);
-      setDownloadNotice("A fresh transfer was requested. Check Downloads for its verified status.");
+      setDownloadNotice("Download restarted. Check Downloads for progress.");
       router.push("/(tabs)/downloads" as never);
       return;
     }
@@ -79,7 +79,7 @@ export default function TitleDetailsScreen() {
     }
     const createdId = await addDownload(title, state.preferences.quality, series ? selectedSeason ?? undefined : undefined, series ? selectedEpisode ?? undefined : undefined);
     if (createdId) {
-      setDownloadNotice("Source and device storage are being checked before any file is saved.");
+      setDownloadNotice("Download started. Check Downloads for progress.");
       router.push("/(tabs)/downloads" as never);
     } else {
       setDownloadNotice("Pause or finish the current transfer, then try again with a valid episode selection.");
@@ -107,18 +107,18 @@ export default function TitleDetailsScreen() {
   const downloadLabel = downloadRecord?.status === "complete"
     ? "Play saved offline"
     : downloadRecord?.status === "paused"
-      ? "Resume offline transfer"
+      ? "Resume download"
       : downloadRecord?.status === "error"
-        ? "Retry offline transfer"
+        ? "Retry download"
         : downloadRecord?.status === "preparing"
-          ? "Checking offline source…"
+          ? "Checking download…"
           : downloadRecord?.status === "downloading"
             ? "View download progress"
             : !title.hasResource
-              ? "Offline source not verified"
+              ? "Download unavailable"
               : series && !validEpisode
                 ? "Select season and episode"
-                : "Save for offline";
+                : "Download";
 
   return (
     <BeraflixScreen>
