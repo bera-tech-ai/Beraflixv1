@@ -28,6 +28,13 @@ export type ChannelRecord = {
   streamType: string;
 };
 
+export type ChannelStream = {
+  kind: "hls" | "embed";
+  url: string;
+  name: string;
+  expiresAt: string | null;
+};
+
 export type CountryRecord = {
   code: string;
   name: string;

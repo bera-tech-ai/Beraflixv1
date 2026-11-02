@@ -133,10 +133,11 @@ export default function ExploreScreen() {
       {!updating && !failed && isChannels && channels.length > 0 ? (
         <View style={styles.channelList}>
           {channels.slice(0, 30).map((item) => (
-            <View key={item.id} style={styles.channelRow}>
+            <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push({ pathname: "/channels/[country]/[id]", params: { country, id: item.id, name: item.name } } as never)} style={({ pressed }) => [styles.channelRow, pressed && styles.pressed]}>
               <View style={styles.channelMark}><Ionicons name="tv-outline" size={17} color={beraflixColors.red} /></View>
               <View style={styles.channelCopy}><Text numberOfLines={1} style={styles.channelName}>{item.name}</Text><Text style={styles.channelMeta}>{item.country || countryLabel}{item.languages.length ? ` · ${item.languages.slice(0, 2).join(", ")}` : ""}</Text></View>
-            </View>
+              <Ionicons name="play-circle-outline" size={22} color={beraflixColors.red} />
+            </Pressable>
           ))}
         </View>
       ) : null}

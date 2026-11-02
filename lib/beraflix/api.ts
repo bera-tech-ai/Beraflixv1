@@ -1,4 +1,4 @@
-import type { CatalogTitle, ChannelRecord, CountryRecord, ExploreContent, HomeFeed, ScheduleProgram } from "@/lib/beraflix/types";
+import type { CatalogTitle, ChannelRecord, ChannelStream, CountryRecord, ExploreContent, HomeFeed, ScheduleProgram } from "@/lib/beraflix/types";
 
 const API_ORIGIN = "https://beraflix-2ti9bgcn.manus.space";
 const VALID_SECTIONS = new Set(["trending", "popularMovies", "popularSeries", "latestMovies", "latestSeries"]);
@@ -120,6 +120,18 @@ export async function getChannels(country: string): Promise<ChannelRecord[]> {
     const languages = Array.isArray(item?.languages) ? item.languages.map((language) => text(language, 80)).filter(Boolean).slice(0, 20) : [];
     return [{ id, name, country: text(item?.country, 80), languages, isGeoBlocked: item?.isGeoBlocked === true, streamType: text(item?.streamType, 80) }];
   });
+}
+
+export async function getChannelStream(country: string, channelId: string): Promise<ChannelStream> {
+  const code = country.trim().toLowerCase();
+  const id = channelId.trim();
+  if (!/^[a-z]{2}$/.test(code) || !/^[A-Za-z0-9_-]{1,128}$/.test(id)) throw new Error("This channel is unavailable.");
+  const data = asRecord(await getJson(queryPath("/api/channels-v2/stream", { country: code, channelId: id })));
+  const kind = data?.kind === "hls" || data?.kind === "embed" ? data.kind : null;
+  const url = typeof data?.url === "string" ? data.url : "";
+  const name = text(data?.name, 180) || "Live channel";
+  if (!kind || !url || !url.startsWith("https://")) throw new Error(text(data?.error, 180) || "This channel has no supported live stream.");
+  return { kind, url, name, expiresAt: typeof data?.expiresAt === "string" ? data.expiresAt : null };
 }
 
 export async function getChannelSchedule(channelId: number): Promise<ScheduleProgram[]> {
