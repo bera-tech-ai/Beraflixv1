@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { ActionButton } from "@/components/beraflix/action-button";
 import { BrandHeader } from "@/components/beraflix/brand-header";
@@ -18,9 +18,9 @@ export default function TitleDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, hydrated, toggleList, markWatched, toggleCollectionItem } = useLibrary();
-  const { records, hydrated: downloadsHydrated, addDownload, resumeDownload, retryDownload, verifyDownload } = useDownloads();
-  const [season, setSeason] = useState("1");
-  const [episode, setEpisode] = useState("1");
+  const { records, hydrated: downloadsHydrated, addDownload, addDownloads, resumeDownload, retryDownload, verifyDownload } = useDownloads();
+  const [selectedSeasons, setSelectedSeasons] = useState<number[]>([1]);
+  const [selectedEpisodes, setSelectedEpisodes] = useState<number[]>([1]);
   const [downloadNotice, setDownloadNotice] = useState("");
   const [playbackNotice, setPlaybackNotice] = useState("");
   const [resolvingPlayback, setResolvingPlayback] = useState(false);
@@ -38,8 +38,8 @@ export default function TitleDetailsScreen() {
   }
 
   const series = /series|tv|show/i.test(title.type);
-  const selectedSeason = /^\d{1,3}$/.test(season) ? Number(season) : null;
-  const selectedEpisode = /^\d{1,3}$/.test(episode) ? Number(episode) : null;
+  const selectedSeason = selectedSeasons[0] ?? null;
+  const selectedEpisode = selectedEpisodes[0] ?? null;
   const validEpisode = !series || Boolean(selectedSeason && selectedEpisode);
   const saved = state.lists.watchlist.includes(title.id);
   const favorite = state.lists.favorites.includes(title.id);
@@ -77,12 +77,14 @@ export default function TitleDetailsScreen() {
       router.push("/(tabs)/downloads" as never);
       return;
     }
-    const createdId = await addDownload(title, state.preferences.quality, series ? selectedSeason ?? undefined : undefined, series ? selectedEpisode ?? undefined : undefined);
-    if (createdId) {
-      setDownloadNotice("Download started. Check Downloads for progress.");
+    const createdIds = series
+      ? await addDownloads(title, state.preferences.quality, selectedSeasons, selectedEpisodes)
+      : [await addDownload(title, state.preferences.quality)];
+    if (createdIds.filter(Boolean).length) {
+      setDownloadNotice(`${createdIds.filter(Boolean).length} download${createdIds.filter(Boolean).length === 1 ? "" : "s"} started. Check Downloads for progress.`);
       router.push("/(tabs)/downloads" as never);
     } else {
-      setDownloadNotice("Pause or finish the current transfer, then try again with a valid episode selection.");
+      setDownloadNotice("Select at least one season and episode, then try again.");
     }
   };
 
@@ -135,17 +137,18 @@ export default function TitleDetailsScreen() {
       </View>
       {series ? (
         <View style={styles.episodeCard}>
-          <SectionHeading title="Choose a download episode" eyebrow="Season and episode" />
-          <View style={styles.episodeInputs}>
-            <View style={styles.episodeField}><Text style={styles.fieldLabel}>Season</Text><TextInput keyboardType="number-pad" maxLength={3} onChangeText={setSeason} placeholder="1" placeholderTextColor={beraflixColors.quiet} style={styles.numberInput} value={season} /></View>
-            <View style={styles.episodeField}><Text style={styles.fieldLabel}>Episode</Text><TextInput keyboardType="number-pad" maxLength={3} onChangeText={setEpisode} placeholder="1" placeholderTextColor={beraflixColors.quiet} style={styles.numberInput} value={episode} /></View>
-          </View>
+          <SectionHeading title="Select downloads" eyebrow="Choose seasons and episodes" />
+          <Text style={styles.fieldLabel}>Seasons</Text>
+          <View style={styles.selectionRail}>{[1, 2, 3, 4, 5].map((value) => <ModeChip key={`season-${value}`} label={`S${value}`} selected={selectedSeasons.includes(value)} onPress={() => setSelectedSeasons((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value].sort((a, b) => a - b))} />)}</View>
+          <Text style={styles.fieldLabel}>Episodes</Text>
+          <View style={styles.selectionRail}>{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <ModeChip key={`episode-${value}`} label={`E${value}`} selected={selectedEpisodes.includes(value)} onPress={() => setSelectedEpisodes((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value].sort((a, b) => a - b))} />)}</View>
+          <Text style={styles.localNote}>{selectedSeasons.length * selectedEpisodes.length} episode{selectedSeasons.length * selectedEpisodes.length === 1 ? "" : "s"} selected. Each episode is saved separately.</Text>
         </View>
       ) : null}
       <View style={styles.actions}>
         <ActionButton label={resolvingPlayback ? "Finding playback details…" : title.hasResource ? "Play" : "No playable source"} disabled={!hydrated || !title.hasResource || resolvingPlayback} onPress={() => void handlePlay()} />
         {playbackNotice ? <Text style={styles.localNote}>{playbackNotice}</Text> : null}
-        <ActionButton label={downloadLabel} disabled={!downloadsHydrated || !title.hasResource || (series && !validEpisode)} onPress={() => void handleOfflineAction()} secondary />
+        <ActionButton label={series ? `Download Selected (${selectedSeasons.length * selectedEpisodes.length})` : downloadLabel} disabled={!downloadsHydrated || !title.hasResource || (series && (!selectedSeasons.length || !selectedEpisodes.length))} onPress={() => void handleOfflineAction()} secondary />
         {downloadNotice ? <Text style={styles.localNote}>{downloadNotice}</Text> : null}
         {!downloadsHydrated ? <Text style={styles.localNote}>Reading offline records from this device…</Text> : null}
         <View style={styles.actionRail}>
@@ -185,6 +188,7 @@ const styles = StyleSheet.create({
   actionRail: { gap: 8 },
   episodeCard: { gap: 11, padding: 15, borderRadius: 16, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
   episodeInputs: { flexDirection: "row", gap: 10 },
+  selectionRail: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
   episodeField: { flex: 1, gap: 5 },
   fieldLabel: { color: beraflixColors.muted, fontSize: 11, fontWeight: "700" },
   numberInput: { minHeight: 44, paddingHorizontal: 12, color: beraflixColors.white, backgroundColor: beraflixColors.elevated, borderWidth: 1, borderColor: beraflixColors.border, borderRadius: 11, fontSize: 15, fontWeight: "700" },

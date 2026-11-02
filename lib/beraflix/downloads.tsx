@@ -40,6 +40,7 @@ type DownloadContextValue = {
   records: DownloadRecord[];
   hydrated: boolean;
   addDownload: (title: CatalogTitle, quality: PlaybackRequest["quality"], season?: number, episode?: number) => Promise<string | null>;
+  addDownloads: (title: CatalogTitle, quality: PlaybackRequest["quality"], seasons: number[], episodes: number[]) => Promise<string[]>;
   pauseDownload: (id: string) => Promise<void>;
   resumeDownload: (id: string) => Promise<void>;
   retryDownload: (id: string) => Promise<void>;
@@ -365,7 +366,6 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     if (recordsRef.current.size >= MAX_DOWNLOADS) return null;
     const series = isSeries(title);
     if (series && (!Number.isInteger(season) || !Number.isInteger(episode) || !season || !episode || season > 999 || episode > 999)) return null;
-    if ([...recordsRef.current.values()].some((record) => record.status === "preparing" || record.status === "downloading")) return null;
     const existing = [...recordsRef.current.values()].find((record) => record.titleId === title.id && record.season === (series ? season : null) && record.episode === (series ? episode : null) && record.status === "complete");
     if (existing) return existing.id;
     const id = `download-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -392,6 +392,15 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     void beginTransfer(item, title);
     return id;
   }, [beginTransfer, hydrated, insertRecord]);
+
+  const addDownloads = useCallback(async (title: CatalogTitle, quality: PlaybackRequest["quality"], seasons: number[], episodes: number[]): Promise<string[]> => {
+    if (!hydrated || Platform.OS === "web" || !title.hasResource || !isSeries(title)) return [];
+    const validSeasons = [...new Set(seasons)].filter((value) => Number.isInteger(value) && value >= 1 && value <= 999);
+    const validEpisodes = [...new Set(episodes)].filter((value) => Number.isInteger(value) && value >= 1 && value <= 999);
+    const combinations = validSeasons.flatMap((selectedSeason) => validEpisodes.map((selectedEpisode) => [selectedSeason, selectedEpisode] as const)).slice(0, 30);
+    const ids = await Promise.all(combinations.map(([selectedSeason, selectedEpisode]) => addDownload(title, quality, selectedSeason, selectedEpisode)));
+    return ids.filter((id): id is string => Boolean(id));
+  }, [addDownload, hydrated]);
 
   const pauseDownload = useCallback(async (id: string) => {
     const task = activeTasks.current.get(id);
@@ -480,7 +489,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
   }, [updateRecord]);
 
   return (
-    <DownloadContext.Provider value={{ records, hydrated, addDownload, pauseDownload, resumeDownload, retryDownload, deleteDownload, verifyDownload }}>
+    <DownloadContext.Provider value={{ records, hydrated, addDownload, addDownloads, pauseDownload, resumeDownload, retryDownload, deleteDownload, verifyDownload }}>
       {children}
     </DownloadContext.Provider>
   );
