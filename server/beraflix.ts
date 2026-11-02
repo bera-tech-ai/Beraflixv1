@@ -116,7 +116,7 @@ async function handlePrepare(request: ExpressRequest, response: ExpressResponse)
   try {
     const upstream = await fetch(`${CONTENT_ORIGIN}/api/offline/prepare?${params.toString()}`, {
       method: "GET",
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Origin: CONTENT_ORIGIN, Referer: `${CONTENT_ORIGIN}/` },
       cache: "no-store",
       redirect: "error",
       signal: controller.signal,
@@ -232,7 +232,7 @@ async function handleMedia(request: ExpressRequest, response: ExpressResponse) {
       timeout = setTimeout(() => controller.abort(), 90_000);
       const upstream = await fetch(`${CONTENT_ORIGIN}/api/offline/file?${params.toString()}`, {
         method: "GET",
-        headers: { Accept: "video/mp4, video/webm", Range: `bytes=${start}-${end}` },
+        headers: { Accept: "video/mp4, video/webm", Range: `bytes=${start}-${end}`, Origin: CONTENT_ORIGIN, Referer: `${CONTENT_ORIGIN}/` },
         cache: "no-store",
         redirect: "error",
         signal: controller.signal,

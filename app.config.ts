@@ -68,7 +68,7 @@ const config: ExpoConfig = {
       projectId: "58256716-f5f4-4f12-95bf-2960d696fe24",
     },
   },
-  orientation: "portrait",
+  orientation: "default",
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "dark",
@@ -111,6 +111,7 @@ const config: ExpoConfig = {
   plugins: [
     "expo-asset",
     "expo-router",
+    "expo-screen-orientation",
     [
       "expo-audio",
       {

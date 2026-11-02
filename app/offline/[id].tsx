@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Brightness from "expo-brightness";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -189,7 +190,15 @@ export default function OfflinePlayerScreen() {
     <BeraflixScreen contentStyle={styles.screen}>
       <BrandHeader />
       <View style={styles.playerFrame}>
-        {status === "Ready offline." ? <VideoView player={player} style={styles.video} contentFit="contain" nativeControls /> : (
+        {status === "Ready offline." ? <VideoView
+          player={player}
+          style={styles.video}
+          contentFit="contain"
+          nativeControls
+          fullscreenOptions={{ enable: true }}
+          onFullscreenEnter={() => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE); }}
+          onFullscreenExit={() => { void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT); }}
+        /> : (
           <View style={styles.placeholder}>
             <Ionicons name="phone-portrait-outline" size={34} color={beraflixColors.red} />
             <Text style={styles.status}>{playerMessage}</Text>

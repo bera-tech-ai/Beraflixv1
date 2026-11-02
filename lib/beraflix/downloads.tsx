@@ -3,7 +3,6 @@ import * as FileSystem from "expo-file-system/legacy";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PropsWithChildren } from "react";
 import { Platform } from "react-native";
 
-import { getApiBaseUrl } from "@/constants/oauth";
 import type { CatalogTitle } from "@/lib/beraflix/types";
 import { searchTitles } from "@/lib/beraflix/api";
 import { preparePlayback, type PlaybackRequest } from "@/lib/beraflix/playback";
@@ -29,6 +28,7 @@ export type DownloadRecord = {
   bytesWritten: number;
   fileUri: string;
   relayHandle: string | null;
+  downloadUri: string | null;
   resumeData: string | null;
   status: DownloadStatus;
   message: string;
@@ -101,6 +101,7 @@ function normalizeDownload(value: unknown): DownloadRecord | null {
   const bytesWritten = typeof item.bytesWritten === "number" && Number.isFinite(item.bytesWritten) ? Math.max(0, Math.min(expectedBytes || Number.MAX_SAFE_INTEGER, item.bytesWritten)) : 0;
   const contentType = item.contentType === "video/mp4" || item.contentType === "video/webm" ? item.contentType : null;
   const relayHandle = typeof item.relayHandle === "string" && /^[A-Za-z0-9_-]{32}$/.test(item.relayHandle) ? item.relayHandle : null;
+  const downloadUri = typeof item.downloadUri === "string" && item.downloadUri.length <= 8192 && item.downloadUri.startsWith("https://") ? item.downloadUri : null;
   const resumeData = typeof item.resumeData === "string" && item.resumeData.length <= 100_000 ? item.resumeData : null;
   const episodeNumber = (entry: unknown) => typeof entry === "number" && Number.isInteger(entry) && entry >= 1 && entry <= 999 ? entry : null;
   return {
@@ -115,6 +116,7 @@ function normalizeDownload(value: unknown): DownloadRecord | null {
     bytesWritten,
     fileUri,
     relayHandle,
+    downloadUri,
     resumeData,
     status,
     message: typeof item.message === "string" ? item.message.slice(0, 180) : "",
@@ -317,8 +319,9 @@ export function DownloadProvider({ children }: PropsWithChildren) {
         quality: record.quality,
         ...(record.season && record.episode ? { season: record.season, episode: record.episode } : {}),
       };
-      const prepared = await preparePlayback(request, controller.signal);
+      const prepared = await preparePlayback(request, controller.signal, { includeOffline: true });
       if (controller.signal.aborted || !recordsRef.current.has(record.id)) return;
+      if (!prepared.downloadUri || !prepared.contentType || prepared.totalBytes < 1) throw new Error("Offline saving is not available for this title.");
       const freeBytes = await FileSystem.getFreeDiskStorageAsync();
       if (freeBytes < prepared.totalBytes + RESERVE_BYTES) throw new Error("Not enough free space on this device.");
       const directory = privateDownloadDirectory();
@@ -335,6 +338,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
         bytesWritten: 0,
         fileUri,
         relayHandle: prepared.relayHandle,
+        downloadUri: prepared.downloadUri,
         resumeData: null,
       });
       if (!next) return;
@@ -371,6 +375,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       bytesWritten: 0,
       fileUri: "",
       relayHandle: null,
+      downloadUri: null,
       resumeData: null,
       status: "preparing",
       message: "Checking source and device storage…",
@@ -408,20 +413,14 @@ export function DownloadProvider({ children }: PropsWithChildren) {
 
   const resumeDownload = useCallback(async (id: string) => {
     const record = recordsRef.current.get(id);
-    if (!record || record.status !== "paused" || !record.resumeData || !record.relayHandle || !record.fileUri || Platform.OS === "web") return;
+    if (!record || record.status !== "paused" || !record.resumeData || !record.downloadUri || !record.fileUri || Platform.OS === "web") return;
     if ([...recordsRef.current.values()].some((item) => item.id !== id && (item.status === "preparing" || item.status === "downloading"))) return;
     const directory = privateDownloadDirectory();
     if (!directory) {
       updateRecord(id, { status: "error", message: "App-private storage is unavailable on this device." });
       return;
     }
-    const apiOrigin = getApiBaseUrl().replace(/\/$/, "");
-    if (!apiOrigin) {
-      updateRecord(id, { status: "error", message: "The secure download service is unavailable right now." });
-      return;
-    }
-    const uri = `${apiOrigin}/api/beraflix/download/${record.relayHandle}`;
-    const task = makeTask(id, uri, record.fileUri, record.expectedBytes, record.resumeData);
+    const task = makeTask(id, record.downloadUri, record.fileUri, record.expectedBytes, record.resumeData);
     activeTasks.current.set(id, task);
     updateRecord(id, { status: "downloading", message: "Resuming transfer…" });
     await runTask(id, task);
@@ -439,6 +438,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       bytesWritten: 0,
       fileUri: "",
       relayHandle: null,
+      downloadUri: null,
       resumeData: null,
       contentType: null,
     });
