@@ -32,7 +32,7 @@ The backend folder is the template's Express/tRPC application, not the original 
 - `server/beraflix.ts` — server-mediated playback and other strictly allowlisted relays, with no database dependency.
 - `assets/images/` — distinct Beraflix launcher, splash, adaptive, monochrome, and favicon assets before checkpointing.
 - `app.config.ts` — existing native identifiers and public runtime config plus the linked EAS project ID; no provider or build credential is embedded.
-- `eas.json` — the `preview` profile produces an internal Android APK and fixes the public API base to the stable existing Beraflix origin, not a temporary sandbox host.
+- `eas.json` — the `preview` profile produces an internal Android APK and fixes the public API base to the stable published Beraflix origin, not a temporary sandbox host.
 - `.easignore` — inherits standard project ignores and explicitly excludes `.env` and `.env.*` from EAS uploads.
 
 ## Design direction

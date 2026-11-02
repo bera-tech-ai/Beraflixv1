@@ -1,6 +1,6 @@
 import type { CatalogTitle, ChannelRecord, CountryRecord, ExploreContent, HomeFeed, ScheduleProgram } from "@/lib/beraflix/types";
 
-const API_ORIGIN = "https://beraflix-vdieblyc.manus.space";
+const API_ORIGIN = "https://beraflix-2ti9bgcn.manus.space";
 const VALID_SECTIONS = new Set(["trending", "popularMovies", "popularSeries", "latestMovies", "latestSeries"]);
 
 function asRecord(value: unknown): Record<string, unknown> | null {

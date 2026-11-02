@@ -6,7 +6,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://beraflix-vdieblyc.manus.space"
+        "EXPO_PUBLIC_API_BASE_URL": "https://beraflix-2ti9bgcn.manus.space"
       }
     }
   }

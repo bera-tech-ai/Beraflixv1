@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Express, Request as ExpressRequest, Response as ExpressResponse } from "express";
 
-const CONTENT_ORIGIN = "https://beraflix-vdieblyc.manus.space";
+const CONTENT_ORIGIN = "https://beraflix-2ti9bgcn.manus.space";
 const PLAYABLE_TYPES = new Set(["video/mp4", "video/webm"]);
 const QUALITIES = new Set(["auto", "360p", "480p", "720p", "1080p"]);
 const MAX_MEDIA_BYTES = 12 * 1024 * 1024 * 1024;

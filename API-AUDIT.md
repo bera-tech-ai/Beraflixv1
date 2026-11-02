@@ -48,4 +48,4 @@ Use an allowlist for metadata calls and map response objects into app-owned type
 
 [1]: https://github.com/bera-tech-ai/Beraflixv1/tree/b58abc66fdd9a0ffea68d628c6bef7f1cf0d45f3/app/api "Beraflix API route handlers at the audited public source revision"
 [2]: https://github.com/bera-tech-ai/Beraflixv1/tree/b58abc66fdd9a0ffea68d628c6bef7f1cf0d45f3/lib "Beraflix server-side API helpers at the audited public source revision"
-[3]: https://beraflix-vdieblyc.manus.space "Deployed Beraflix API origin"
+[3]: https://beraflix-2ti9bgcn.manus.space "Deployed Beraflix API origin"
