@@ -113,7 +113,7 @@ export default function TitleDetailsScreen() {
       : downloadRecord?.status === "error"
         ? "Retry download"
         : downloadRecord?.status === "preparing"
-          ? "Checking download…"
+          ? "Starting download…"
           : downloadRecord?.status === "downloading"
             ? "View download progress"
             : !title.hasResource
@@ -146,7 +146,7 @@ export default function TitleDetailsScreen() {
         </View>
       ) : null}
       <View style={styles.actions}>
-        <ActionButton label={resolvingPlayback ? "Finding playback details…" : title.hasResource ? "Play" : "No playable source"} disabled={!hydrated || !title.hasResource || resolvingPlayback} onPress={() => void handlePlay()} />
+        <ActionButton label={resolvingPlayback ? "Opening player…" : title.hasResource ? "Play" : "No playable source"} disabled={!hydrated || !title.hasResource || resolvingPlayback} onPress={() => void handlePlay()} />
         {playbackNotice ? <Text style={styles.localNote}>{playbackNotice}</Text> : null}
         <ActionButton label={series ? `Download Selected (${selectedSeasons.length * selectedEpisodes.length})` : downloadLabel} disabled={!downloadsHydrated || !title.hasResource || (series && (!selectedSeasons.length || !selectedEpisodes.length))} onPress={() => void handleOfflineAction()} secondary />
         {downloadNotice ? <Text style={styles.localNote}>{downloadNotice}</Text> : null}

@@ -28,7 +28,7 @@ export default function PlayerScreen() {
   const title = getRememberedTitle(String(id ?? "")) ?? state.items[String(id ?? "")] ?? null;
   const player = useVideoPlayer(null);
   const [status, setStatus] = useState<PlaybackState>("idle");
-  const [statusMessage, setStatusMessage] = useState("Ready to prepare secure playback.");
+  const [statusMessage, setStatusMessage] = useState("Ready to play.");
   const [season, setSeason] = useState("");
   const [episode, setEpisode] = useState("");
   const [playing, setPlaying] = useState(false);
@@ -50,6 +50,10 @@ export default function PlayerScreen() {
   const isSeries = Boolean(title && /series|tv|show/i.test(title.type));
   const selectedSeason = /^\d{1,3}$/.test(season) ? Number(season) : undefined;
   const selectedEpisode = /^\d{1,3}$/.test(episode) ? Number(episode) : undefined;
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/explore" as never);
+  };
 
   useEffect(() => {
     titleRef.current = title;
@@ -178,7 +182,7 @@ export default function PlayerScreen() {
     }
 
     setStatus("preparing");
-    setStatusMessage("Preparing playback…");
+      setStatusMessage("Opening playback…");
     playbackAbort.current?.abort();
     const controller = new AbortController();
     playbackAbort.current = controller;
@@ -239,8 +243,8 @@ export default function PlayerScreen() {
     return (
       <BeraflixScreen>
         <BrandHeader />
-        <EmptyState icon="play-circle-outline" title="Player unavailable" message="Open a title from Discover or Explore to prepare playback." />
-        <ActionButton label="Back" onPress={() => router.back()} secondary />
+        <EmptyState icon="play-circle-outline" title="Player unavailable" message="Open a title from Discover or Explore to play it." />
+        <ActionButton label="Back" onPress={goBack} secondary />
       </BeraflixScreen>
     );
   }
@@ -335,10 +339,10 @@ export default function PlayerScreen() {
       </View>
 
       {status !== "ready" ? <Text style={styles.statusLabel}>{statusMessage}</Text> : null}
-      <ActionButton label={status === "preparing" ? "Preparing playback…" : status === "ready" ? "Reload playback" : "Prepare & play"} disabled={!playbackEnabled} onPress={() => void prepareAndPlay()} />
+      <ActionButton label={status === "ready" ? "Play again" : "Play"} disabled={!playbackEnabled} onPress={() => void prepareAndPlay()} />
       {!title.hasResource ? <Text style={styles.unavailable}>This title does not have a verified playable resource.</Text> : null}
       {status === "error" ? <ActionButton label="Retry" disabled={!playbackEnabled} onPress={() => void prepareAndPlay()} secondary /> : null}
-      <ActionButton label="Back to title" onPress={() => router.back()} secondary />
+      <ActionButton label="Back to title" onPress={goBack} secondary />
       <Text style={styles.localNote}>Playback history and preferences stay on this device. Media source addresses are handled securely and are never shown in the app.</Text>
     </BeraflixScreen>
   );

@@ -25,6 +25,10 @@ export default function LiveChannelScreen() {
   const [streamKind, setStreamKind] = useState<"hls" | "embed" | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/explore" as never);
+  };
 
   const load = useCallback(() => {
     requestRef.current?.abort();
@@ -94,7 +98,7 @@ export default function LiveChannelScreen() {
         </View>}
       </View>
       {status === "error" ? <ActionButton label="Retry live channel" onPress={load} /> : null}
-      <ActionButton label="Back to channels" onPress={() => router.back()} secondary />
+      <ActionButton label="Back to channels" onPress={goBack} secondary />
     </BeraflixScreen>
   );
 }

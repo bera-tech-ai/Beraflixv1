@@ -7,6 +7,7 @@ import type { CatalogTitle } from "@/lib/beraflix/types";
 import { searchTitles } from "@/lib/beraflix/api";
 import { preparePlayback, type PlaybackRequest } from "@/lib/beraflix/playback";
 import { getRememberedTitle } from "@/lib/beraflix/title-cache";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 const STORAGE_KEY = "beraflix.device-downloads.v1";
 const ALLOWED_QUALITIES = ["auto", "360p", "480p", "720p", "1080p"] as const;
@@ -89,6 +90,15 @@ function privateDownloadDirectory(): string {
   return root ? `${root}beraflix-downloads/` : "";
 }
 
+function downloadHeaders(): Record<string, string> {
+  try {
+    const origin = new URL(getApiBaseUrl()).origin;
+    return { Accept: "video/*,application/octet-stream", Origin: origin, Referer: `${origin}/` };
+  } catch {
+    return { Accept: "video/*,application/octet-stream" };
+  }
+}
+
 function normalizeDownload(value: unknown): DownloadRecord | null {
   const item = asRecord(value);
   const title = safeTitle(item?.title);
@@ -145,7 +155,7 @@ class DownloadHttpError extends Error {
 function safeTransferMessage(error: unknown): string {
   if (error instanceof DownloadHttpError) {
     if (error.status === 403 || error.status === 415) return "Offline saving is not available for this title.";
-    if (error.status === 404 || error.status === 416) return "The secure transfer expired or changed. Retry to prepare a fresh file.";
+    if (error.status === 404 || error.status === 416) return "The secure transfer expired or changed. Retry to request a fresh file.";
     return error.status >= 500 ? "The secure offline transfer is temporarily unavailable." : "This title could not be saved offline.";
   }
   if (error instanceof Error && error.message === "Not enough free space on this device.") return error.message;
@@ -260,7 +270,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     FileSystem.createDownloadResumable(
       uri,
       fileUri,
-      { sessionType: FileSystem.FileSystemSessionType.BACKGROUND },
+      { sessionType: FileSystem.FileSystemSessionType.BACKGROUND, headers: downloadHeaders() },
       progressCallback(id, fileUri, expectedBytes),
       resumeData,
     )
@@ -274,9 +284,10 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       if (result.status !== 200 && result.status !== 206) throw new DownloadHttpError(result.status);
       const current = recordsRef.current.get(id);
       if (!current || !current.fileUri) return;
-      const responseType = String(result.mimeType || result.headers["Content-Type"] || result.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+      const headers = result.headers ?? {};
+      const responseType = String(result.mimeType || headers["Content-Type"] || headers["content-type"] || "").split(";")[0].trim().toLowerCase();
       const contentType = responseType === "video/mp4" || responseType === "video/webm" ? responseType : current.contentType || "video/mp4";
-      if (responseType && !["video/mp4", "video/webm"].includes(responseType)) throw new Error("The saved media type could not be verified.");
+      if (responseType && !["video/mp4", "video/webm", "application/octet-stream", "application/mp4"].includes(responseType)) throw new Error("The saved media type could not be verified.");
       const info = await FileSystem.getInfoAsync(current.fileUri);
       if (!info.exists || info.isDirectory || info.size < 1) throw new Error("The saved byte count could not be verified.");
       updateRecord(id, {
@@ -313,7 +324,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     }
     const controller = new AbortController();
     preparingControllers.current.set(record.id, controller);
-      updateRecord(record.id, { status: "preparing", message: "Checking the download…", bytesWritten: 0 });
+      updateRecord(record.id, { status: "preparing", message: "Starting download…", bytesWritten: 0 });
     try {
       const title = await resolveTitle(record, preferred);
       if (controller.signal.aborted || !recordsRef.current.has(record.id)) return;
@@ -384,7 +395,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
       downloadUri: null,
       resumeData: null,
       status: "preparing",
-      message: "Checking source and device storage…",
+      message: "Starting download on this device…",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -448,7 +459,7 @@ export function DownloadProvider({ children }: PropsWithChildren) {
     if (record.fileUri) await FileSystem.deleteAsync(record.fileUri, { idempotent: true }).catch(() => undefined);
     const reset = updateRecord(id, {
       status: "preparing",
-      message: "Preparing a fresh download…",
+      message: "Starting a fresh download…",
       expectedBytes: 0,
       bytesWritten: 0,
       fileUri: "",

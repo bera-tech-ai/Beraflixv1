@@ -105,7 +105,7 @@ function DownloadCard({
       : record.status === "paused"
         ? `PAUSED · ${percent}% SAVED`
         : record.status === "preparing"
-          ? "CHECKING SOURCE"
+          ? "STARTING DOWNLOAD"
           : "NOT AVAILABLE";
 
   return (
@@ -124,7 +124,7 @@ function DownloadCard({
             </View>
           ) : null}
           {record.status === "error" ? <Text style={styles.errorText}>{record.message}</Text> : null}
-          {record.status === "preparing" ? <Text style={styles.messageText}>{record.message}</Text> : null}
+          {record.status === "preparing" ? <Text style={styles.messageText}>Starting download…</Text> : null}
         </View>
       </View>
       <View style={styles.actions}>
@@ -132,7 +132,6 @@ function DownloadCard({
         {record.status === "downloading" ? <ActionButton label="Pause" onPress={onPause} secondary /> : null}
         {record.status === "paused" ? <ActionButton label="Resume" disabled={hasActiveTransfer} onPress={onResume} secondary /> : null}
         {record.status === "error" ? <ActionButton label="Retry" disabled={hasActiveTransfer} onPress={onRetry} secondary /> : null}
-        {record.status === "preparing" ? <Text style={styles.messageText}>Preparing on this device…</Text> : null}
         <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${record.title.title} download`} onPress={onDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
           <Ionicons name="trash-outline" size={17} color={beraflixColors.muted} />
         </Pressable>

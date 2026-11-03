@@ -45,6 +45,10 @@ export default function OfflinePlayerScreen() {
   const subtitleTracksRef = useRef(subtitleTracks);
   const originalBrightness = useRef<number | null>(null);
   const playerMessage = recordStatus === "complete" ? status : "This saved file is not available. Return to Downloads to retry or remove it.";
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)/downloads" as never);
+  };
 
   useEffect(() => {
     titleRef.current = title;
@@ -181,7 +185,7 @@ export default function OfflinePlayerScreen() {
       <BeraflixScreen>
         <BrandHeader />
         <EmptyState icon="cloud-offline-outline" title="Saved file unavailable" message="This download record is no longer on this device." />
-        <ActionButton label="Back to Downloads" onPress={() => router.back()} secondary />
+        <ActionButton label="Back to Downloads" onPress={goBack} secondary />
       </BeraflixScreen>
     );
   }
@@ -237,7 +241,7 @@ export default function OfflinePlayerScreen() {
           </View>
         ) : <Text style={styles.meta}>Screen-brightness control is not supported here.</Text>}
       </View>
-      <ActionButton label="Back to Downloads" onPress={() => router.back()} secondary />
+      <ActionButton label="Back to Downloads" onPress={goBack} secondary />
       <Text style={styles.localNote}>Offline playback reads the verified file stored on this device.</Text>
     </BeraflixScreen>
   );
