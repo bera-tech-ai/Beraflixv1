@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useCallback } from "react";
@@ -57,11 +58,13 @@ export default function DeviceMediaPlayerScreen() {
     <BeraflixScreen contentStyle={styles.screen}>
       <BrandHeader />
       <View style={styles.heading}>
-        <Text style={styles.eyebrow}>{media.kind === "video" ? "DEVICE VIDEO" : "DEVICE MUSIC"}</Text>
+        <Text style={styles.eyebrow}>{media.kind === "video" ? "PHONE VIDEO" : media.kind === "audio" ? "PHONE MUSIC" : "PHONE PHOTO"}</Text>
         <Text style={styles.title} numberOfLines={2}>{media.name}</Text>
-        <Text style={styles.meta}>{formatBytes(media.size)} · Stored in Beraflix private storage</Text>
+        <Text style={styles.meta}>Stored on this phone</Text>
       </View>
-      {media.kind === "video" ? (
+      {media.kind === "image" ? (
+        <Image source={{ uri: media.uri }} style={styles.photo} contentFit="contain" />
+      ) : media.kind === "video" ? (
         <VideoView
           player={videoPlayer}
           style={styles.video}
@@ -86,13 +89,6 @@ export default function DeviceMediaPlayerScreen() {
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "Size unavailable";
-  const units = ["B", "KB", "MB", "GB"];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / 1024 ** exponent).toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
-}
-
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
   const whole = Math.floor(seconds);
@@ -106,6 +102,7 @@ const styles = StyleSheet.create({
   title: { color: beraflixColors.white, fontSize: 24, fontWeight: "900", lineHeight: 29 },
   meta: { color: beraflixColors.muted, fontSize: 12, lineHeight: 18 },
   video: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#000", borderRadius: 16 },
+  photo: { width: "100%", aspectRatio: 1, backgroundColor: "#000", borderRadius: 16 },
   audioCard: { alignItems: "center", gap: 14, padding: 28, borderRadius: 20, backgroundColor: beraflixColors.surface, borderWidth: 1, borderColor: beraflixColors.border },
   musicIcon: { width: 128, height: 128, borderRadius: 64, alignItems: "center", justifyContent: "center", backgroundColor: beraflixColors.elevated },
   audioTitle: { color: beraflixColors.white, fontSize: 17, fontWeight: "800", textAlign: "center" },
