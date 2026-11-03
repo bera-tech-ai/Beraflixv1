@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Brightness from "expo-brightness";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useVideoPlayer, VideoView, type SubtitleTrack } from "expo-video";
 
 import { ActionButton } from "@/components/beraflix/action-button";
@@ -50,10 +50,10 @@ export default function PlayerScreen() {
   const isSeries = Boolean(title && /series|tv|show/i.test(title.type));
   const selectedSeason = /^\d{1,3}$/.test(season) ? Number(season) : undefined;
   const selectedEpisode = /^\d{1,3}$/.test(episode) ? Number(episode) : undefined;
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)/explore" as never);
-  };
+  }, [router]);
 
   useEffect(() => {
     titleRef.current = title;
@@ -143,6 +143,14 @@ export default function PlayerScreen() {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
     player.pause();
   }, [player]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [goBack]);
 
   const schedulePlaybackRefresh = (request: Parameters<typeof preparePlayback>[0], expiresIn: number) => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -343,6 +351,7 @@ export default function PlayerScreen() {
       {!title.hasResource ? <Text style={styles.unavailable}>This title does not have a verified playable resource.</Text> : null}
       {status === "error" ? <ActionButton label="Retry" disabled={!playbackEnabled} onPress={() => void prepareAndPlay()} secondary /> : null}
       <ActionButton label="Back to title" onPress={goBack} secondary />
+      <ActionButton label="Choose another title" onPress={() => router.replace("/(tabs)/explore" as never)} secondary />
       <Text style={styles.localNote}>Playback history and preferences stay on this device. Media source addresses are handled securely and are never shown in the app.</Text>
     </BeraflixScreen>
   );

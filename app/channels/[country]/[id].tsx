@@ -2,7 +2,7 @@ import * as ScreenOrientation from "expo-screen-orientation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { BackHandler, StyleSheet, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { WebView } from "react-native-webview";
 
@@ -25,10 +25,10 @@ export default function LiveChannelScreen() {
   const [streamKind, setStreamKind] = useState<"hls" | "embed" | null>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)/explore" as never);
-  };
+  }, [router]);
 
   const load = useCallback(() => {
     requestRef.current?.abort();
@@ -75,6 +75,14 @@ export default function LiveChannelScreen() {
     return () => subscription.remove();
   }, [player]);
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [goBack]);
+
   return (
     <BeraflixScreen contentStyle={styles.screen}>
       <BrandHeader />
@@ -99,6 +107,7 @@ export default function LiveChannelScreen() {
       </View>
       {status === "error" ? <ActionButton label="Retry live channel" onPress={load} /> : null}
       <ActionButton label="Back to channels" onPress={goBack} secondary />
+      <ActionButton label="Choose another channel" onPress={() => router.replace("/(tabs)/explore" as never)} secondary />
     </BeraflixScreen>
   );
 }
