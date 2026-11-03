@@ -51,8 +51,7 @@ export default function PlayerScreen() {
   const selectedSeason = /^\d{1,3}$/.test(season) ? Number(season) : undefined;
   const selectedEpisode = /^\d{1,3}$/.test(episode) ? Number(episode) : undefined;
   const goBack = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/explore" as never);
+    router.replace("/(tabs)/explore" as never);
   }, [router]);
 
   useEffect(() => {

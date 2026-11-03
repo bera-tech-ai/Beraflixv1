@@ -33,6 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen name="explore" options={{ title: "Explore", tabBarIcon: ({ color, size }) => <Ionicons name="search-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="shelf" options={{ title: "My Shelf", tabBarIcon: ({ color, size }) => <Ionicons name="bookmark-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="downloads" options={{ title: "Downloads", tabBarIcon: ({ color, size }) => <Ionicons name="download-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="device-library" options={{ title: "Device", tabBarIcon: ({ color, size }) => <Ionicons name="folder-open-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
     </Tabs>
   );

@@ -26,8 +26,7 @@ export default function LiveChannelScreen() {
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const goBack = useCallback(() => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/explore" as never);
+    router.replace("/(tabs)/explore" as never);
   }, [router]);
 
   const load = useCallback(() => {

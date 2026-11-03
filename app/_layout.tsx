@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
+import { DeviceLibraryProvider } from "@/lib/beraflix/device-library";
 import { DownloadProvider } from "@/lib/beraflix/downloads";
 import { LibraryProvider } from "@/lib/beraflix/library";
 import { ThemeProvider } from "@/lib/theme-provider";
@@ -83,6 +84,7 @@ export default function RootLayout() {
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LibraryProvider>
+      <DeviceLibraryProvider>
       <DownloadProvider>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
@@ -97,6 +99,7 @@ export default function RootLayout() {
         </QueryClientProvider>
       </trpc.Provider>
       </DownloadProvider>
+      </DeviceLibraryProvider>
       </LibraryProvider>
     </GestureHandlerRootView>
   );

@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Brightness from "expo-brightness";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BackHandler, Pressable, StyleSheet, Text, View } from "react-native";
 import { useVideoPlayer, VideoView, type SubtitleTrack } from "expo-video";
 
 import { ActionButton } from "@/components/beraflix/action-button";
@@ -45,10 +45,17 @@ export default function OfflinePlayerScreen() {
   const subtitleTracksRef = useRef(subtitleTracks);
   const originalBrightness = useRef<number | null>(null);
   const playerMessage = recordStatus === "complete" ? status : "This saved file is not available. Return to Downloads to retry or remove it.";
-  const goBack = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/downloads" as never);
-  };
+  const goBack = useCallback(() => {
+    router.replace("/(tabs)/downloads" as never);
+  }, [router]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      goBack();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [goBack]);
 
   useEffect(() => {
     titleRef.current = title;
